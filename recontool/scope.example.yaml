@@ -1,0 +1,56 @@
+# Example scope file for recontool.
+#
+# This is the single authorization boundary the whole tool enforces.
+# Every module checks the resolved host/IP against this file before it
+# sends a single request — see README.md's "Scope enforcement" section.
+
+targets:
+  - example.com          # bare hostname/domain; subdomains of it are matched too
+  - 203.0.113.0/24        # CIDR range — authorizes IPs, not auto-enumerated hosts
+
+exclude:
+  - 203.0.113.1/32        # carved out even though it's inside the targets CIDR above
+  - staging.example.com   # explicitly off-limits subdomain
+
+# Per-host concurrency ceiling. The worker pool AND every shelled-out
+# tool's own concurrency flag are derived from this one number so they
+# never multiply against each other.
+max_concurrent_requests: 5
+
+# If true, a newly discovered subdomain of an in-scope domain (via
+# crt.sh, a vhost hit, etc.) is automatically added to the live target
+# set. If false (the default), it's logged as "discovered, out of scope"
+# and never enumerated.
+allow_subdomain_discovery: false
+
+# Restrict web probing to specific ports. Defaults to [80, 443].
+ports:
+  - 80
+  - 443
+
+# --- Everything below is config-file-only; all have sane defaults. ---
+
+worker_pool_size: 10        # total concurrent goroutines across all hosts
+recursion_depth_cap: 3      # feroxbuster --depth
+
+wordlist_base_dir: ./wordlists
+wordlists:
+  generic:
+    - raft-small-words.txt
+    - common.txt
+  tech_specific:
+    wordpress:
+      - wordpress-wordlist.txt
+  subdomains:
+    - subdomains-top1million.txt
+    - bitquark-subdomains.txt
+
+timeouts:
+  http_seconds: 10
+  dns_seconds: 5
+  tool_run_seconds: 300
+
+tool_paths:
+  whatweb: whatweb
+  feroxbuster: feroxbuster
+  gowitness: gowitness
